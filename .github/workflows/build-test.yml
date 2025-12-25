@@ -35,7 +35,7 @@ jobs:
         run: ./gradlew build dist
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-files-${{ github.event.inputs.tag }}
           path: build/dist/
