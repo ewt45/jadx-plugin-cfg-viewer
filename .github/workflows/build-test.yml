@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag }}
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -28,6 +30,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Build
+        env:
+          VERSION: ${{ github.event.inputs.tag }}
         run: ./gradlew build dist
 
       - name: Upload artifact

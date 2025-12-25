@@ -57,9 +57,8 @@ class NLS {
 			initedLang = lang;
 
 		if (lang.equals("zh")) {
-			infoName = "查看控制流图（CFG）";
-			infoDescription = "创建函数的控制流图（CFG），以图片格式显示。需要运行环境已安装 graphviz（用到 'dot' 命令）。" +
-					"\n\n使用方法：使用 Jadx-GUI 打开一个反编译后的 Java 代码界面，鼠标放在一个函数名上右键 -> 查看函数控制流图。";
+			infoName = "查看控制流图";
+			infoDescription = "右键函数名创建对应的控制流图（CFG），以图片格式显示。需要运行环境已安装 graphviz。";
 			optionViewCFG = "查看函数控制流图";
 			prefDefaultDumpType = "默认控制流图类型";
 			logNotSupportMouseWheelBlock = "尚未支持 mouseWheelRotatedByBlock 缩放。";
@@ -76,8 +75,7 @@ class NLS {
 
 		} else {
 			infoName = "CFG Viewer";
-			infoDescription = "Generate method's CFG and display it as image. Graphviz needs to be installed in runtime environment." +
-					"\n\nUsage: Open a decompiled Java code tab and right click on a method's name -> View method CFG";
+			infoDescription = "Right-click a method to generate its control flow graph and display it as image. Graphviz is required.";
 			optionViewCFG = "View method CFG";
 			prefDefaultDumpType = "Default CFG type";
 			logNotSupportMouseWheelBlock = "mouseWheelRotatedByBlock not implemented.";
