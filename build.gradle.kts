@@ -13,7 +13,7 @@ plugins {
 }
 
 dependencies {
-	val jadxVersion = "1.5.1"
+	val jadxVersion = "1.5.3"
 	val isJadxSnapshot = jadxVersion.endsWith("-SNAPSHOT")
 
 	// use compile only scope to exclude jadx-core and its dependencies from result jar
@@ -21,13 +21,25 @@ dependencies {
         isChanging = isJadxSnapshot
     }
 
-	testImplementation("io.github.skylot:jadx-smali-input:$jadxVersion") {
-        isChanging = isJadxSnapshot
-    }
-	testImplementation("ch.qos.logback:logback-classic:1.5.18")
-	testImplementation("org.assertj:assertj-core:3.27.3")
-	testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	compileOnly("io.github.skylot:jadx-gui:$jadxVersion") {
+		isChanging = isJadxSnapshot
+	}
+
+	compileOnly("org.slf4j:slf4j-api:2.0.17")
+	// 来自 jadx-gui
+	compileOnly("com.fifesoft:rsyntaxtextarea:3.6.0")
+	compileOnly("com.formdev:flatlaf-extras:3.7")
+
+	implementation("org.piccolo2d:piccolo2d-core:3.0.1")
+	implementation("org.piccolo2d:piccolo2d-extras:3.0.1")
+
+//	testImplementation("io.github.skylot:jadx-smali-input:$jadxVersion") {
+//        isChanging = isJadxSnapshot
+//    }
+//	testImplementation("ch.qos.logback:logback-classic:1.5.18")
+//	testImplementation("org.assertj:assertj-core:3.27.3")
+//	testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
+//	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 repositories {

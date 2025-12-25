@@ -1,0 +1,273 @@
+package jadx.plugins.viewer.cfg;
+
+import com.mxgraph.layout.hierarchical.mxHierarchicalLayout;
+import com.mxgraph.swing.mxGraphComponent;
+
+import org.jetbrains.annotations.NotNull;
+import org.jgrapht.Graph;
+import org.jgrapht.ext.JGraphXAdapter;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.nio.dot.DOTImporter;
+
+import java.awt.Component;
+import java.awt.Point;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Serial;
+import java.io.StringReader;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import javax.imageio.ImageIO;
+import javax.swing.BoxLayout;
+import javax.swing.JComponent;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
+import javax.swing.border.EmptyBorder;
+
+import hu.kazocsaba.imageviewer.ImageViewer;
+import hu.kazocsaba.imageviewer.ResizeStrategy;
+import jadx.core.Jadx;
+import jadx.core.dex.nodes.MethodNode;
+import jadx.core.dex.visitors.DotGraphVisitor;
+import jadx.core.dex.visitors.IDexTreeVisitor;
+import jadx.core.utils.Utils;
+import jadx.core.utils.exceptions.JadxException;
+import jadx.core.utils.exceptions.JadxRuntimeException;
+import jadx.gui.ui.panel.ContentPanel;
+import jadx.gui.ui.tab.TabbedPane;
+
+public class CfgImagePanel extends ContentPanel {
+	@Serial
+	private static final long serialVersionUID = -4676535827617942121L;
+
+	public CfgImagePanel(TabbedPane panel, CfgJNode res) {
+		super(panel, res);
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+
+		JTextArea infoText = new JTextArea("Loading...");
+		infoText.setEditable(false);
+		infoText.setFocusable(true);
+		infoText.setBorder(new EmptyBorder(8, 8, 8, 8));
+		add(infoText);
+		add(new JSeparator(SwingConstants.HORIZONTAL));
+
+		// 1. 显示加载中
+		// 2. 从 methodNode 获取 dot, 再转为 png (新建线程？）
+		// 3. 显示 png 或错误
+
+		// 1. 自定义界面同时显示文字和图片。
+		// 2. 检查 dot 命令，dot 文件，png 文件，
+		// 3. 提供选项选择 dump 方式
+		// 4. 鼠标可以缩放和拖拽图片。缩放范围根据图片尺寸而定
+
+		// 线程相关参考 BinaryContentPanel
+
+		try {
+			File dotFile = dumpCFG(res.getMethodNode());
+			File pngFile = dot2Png(dotFile);
+			BufferedImage img = ImageIO.read(pngFile);
+			// 加在外层的监听器，鼠标在文本上可以接收到滚动事件，放图片上就接收不到，图片里有控件给消耗掉了
+			addMouseWheelListener(e -> {
+				CfgViewerPlugin.LOG.debug("out 鼠标滚轮事件");
+			});
+			ImageViewer imageViewer = new ImageViewer(img);
+			JComponent theImage = getInnerImage(imageViewer);
+
+			MouseAdapter mouseAdapter = new MouseAdapter() {
+				private Point startMosP = new Point();
+				private Point2D.Double startImgP = new Point2D.Double();
+
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					CfgViewerPlugin.LOG.debug("mouseReleased");
+				}
+
+				@Override
+				public void mousePressed(MouseEvent e) {
+					if (e.isConsumed() || e.getButton() != MouseEvent.BUTTON1) return;
+					CfgViewerPlugin.LOG.debug("鼠标点击事件");
+					AffineTransform t = imageViewer.getImageTransform();
+					startMosP = new Point(e.getPoint());
+					startImgP = new Point2D.Double(t.getTranslateX(), t.getTranslateY());
+				}
+				@Override
+				public void mouseDragged(MouseEvent e) {
+					if (e.isConsumed() || (e.getModifiersEx() & MouseEvent.BUTTON1_DOWN_MASK) == 0) return;
+					double offXToStart = e.getX() -startMosP.x;
+					double offYToStart = e.getY() -startMosP.y;
+					AffineTransform t = imageViewer.getImageTransform();
+					t.translate(startImgP.x - offXToStart, startImgP.y - offYToStart);
+					CfgViewerPlugin.LOG.debug("鼠标拖拽事件, consumed = {}, e.getModifiersEx() = {}", e.isConsumed(), e.getModifiersEx());
+				}
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					CfgViewerPlugin.LOG.debug("鼠标Clicked事件");
+				}
+
+				@Override
+				public void mouseWheelMoved(MouseWheelEvent e) {
+					CfgViewerPlugin.LOG.debug("鼠标滚轮事件");
+					double rotation = e.getPreciseWheelRotation();
+					imageViewer.setResizeStrategy(ResizeStrategy.CUSTOM_ZOOM);
+					imageViewer.setZoomFactor(imageViewer.getZoomFactor() * (rotation <0 ? 1.1 : 0.9));
+				}
+
+
+			};
+			// addMouseListener 的接口没有 mouseDragged, 所以要再调用 mouseMotionListener 和 Wheel.
+			// 而且 wheel 要设置给 panel （getComponent.add), 另外两个要设置给 ImageComponent （直接 add）设置给 panel 没用。
+			// 最新发现都设置给 theImage 可以，而且也不用移除 JScrollPane 的监听了因为在更内部
+			theImage.addMouseListener(mouseAdapter);
+			theImage.addMouseMotionListener(mouseAdapter);
+			theImage.addMouseWheelListener(mouseAdapter);
+
+			add(imageViewer.getComponent());
+			infoText.setText("Loaded!");
+		} catch (Exception e) {
+			CfgViewerPlugin.LOG.error("", e);
+			// 直接在构造函数里用 uiRun 会报错？
+			infoText.setText("Image load error:\n" + Utils.getStackTrace(e));
+		}
+	}
+
+
+	@NotNull
+	private File dumpCFG(MethodNode methodNode) throws IOException, JadxException {
+		File dotDir = Files.createTempDirectory("jadx-dot").toFile();
+		dotDir.deleteOnExit();
+
+		// 先 reload 生成 insn, 然后 passes 生成 block
+		// 参考 Jadx.java 中，似乎生成特定类型的 cfg 对 pass 的位置有要求？全过完了还能生成 raw 的吗？
+		if (methodNode.getBasicBlocks() == null) {
+			methodNode.reload();
+
+			List<IDexTreeVisitor> passes = Jadx.getRegionsModePasses(methodNode.root().getArgs());
+			for (IDexTreeVisitor pass : passes) pass.init(methodNode.root());
+			for (IDexTreeVisitor pass : passes) pass.visit(methodNode);
+		}
+
+
+		DotGraphVisitor.dump().save(dotDir, methodNode);
+
+		File dotFile = dotDir;
+		while (dotFile != null && dotFile.isDirectory()) {
+			File[] list = dotFile.listFiles();
+			dotFile = list == null || list.length != 1 ? null : list[0];
+		}
+		if (dotFile == null) {
+			throw new JadxRuntimeException("dotFile is null!");
+		}
+		CfgViewerPlugin.LOG.debug("创建临时文件：{}", dotFile);
+		return dotFile;
+	}
+
+	@NotNull
+	private File dot2Png(File dotFile) throws IOException, InterruptedException {
+		File pngFile = Files.createTempFile(dotFile.getName(), ".png").toFile();
+		pngFile.deleteOnExit();
+		Process process = new ProcessBuilder("dot", "-Tpng", dotFile.getAbsolutePath(), "-o", pngFile.getAbsolutePath()).start();
+		String errorStr;
+		try (BufferedReader reader = process.errorReader()) {
+			errorStr = reader.lines().collect(Collectors.joining("\n"));
+		}
+		int result = process.waitFor();
+		if (result != 0 || !errorStr.isEmpty()) {
+			throw new IOException("Failed to convert dot to png, exit code = " + result + "\nerror output: " + errorStr);
+		}
+		CfgViewerPlugin.LOG.debug("创建图片文件：{}", pngFile);
+		return pngFile;
+	}
+
+	private BufferedImage loadImage(File imgFile) {
+		try {
+			return ImageIO.read(imgFile); //ImageIO.read(new ByteArrayInputStream(res.getData()));
+		} catch (Exception e) {
+			throw new JadxRuntimeException("Failed to load image", e);
+		}
+	}
+
+	private void addJGraphX(CfgJNode res) {
+		try {
+			// 1. 创建 JGraphT 图对象
+			Graph<String, DefaultEdge> jgraphtGraph = new DefaultDirectedGraph<>(DefaultEdge.class);
+
+			// 2. 使用 DOTImporter 导入数据
+			DOTImporter<String, DefaultEdge> importer = new DOTImporter<>();
+			// 设置如何提取节点 ID（控制流图的关键）
+			importer.setVertexFactory(id -> {
+				CfgViewerPlugin.LOG.debug("id 是什么？" + id);
+				return id;
+			});
+			AtomicReference<String> dotStr = new AtomicReference<>(Files.readString(res.getDotFile().toPath()));
+			Arrays.asList("l", ":", "/", " ", "-", ">", "<", "{", "}")
+					.forEach(str -> dotStr.set(dotStr.get().replace("\\" + str, str)));
+			try (Reader reader = new StringReader(dotStr.get())) {
+				importer.importGraph(jgraphtGraph, reader);
+			}
+
+			// 3. 转换为 JGraphX 适配器
+			JGraphXAdapter<String, DefaultEdge> graphAdapter = new JGraphXAdapter<>(jgraphtGraph);
+
+			// 4. 应用自动布局 (控制流图通常使用分层布局 mxHierarchicalLayout)
+			mxHierarchicalLayout layout = new mxHierarchicalLayout(graphAdapter);
+			layout.execute(graphAdapter.getDefaultParent());
+
+			// 5. 放入 Swing 组件
+			mxGraphComponent graphComponent = new mxGraphComponent(graphAdapter);
+
+			// 开启基础功能：支持鼠标缩放、平移
+			graphComponent.setWheelScrollingEnabled(true);
+			graphComponent.setPanning(true);
+
+			add(graphComponent);
+		} catch (Exception e) {
+			throw new JadxRuntimeException("Failed to load image", e);
+		}
+	}
+
+	@Override
+	public void loadSettings() {
+		// no op
+	}
+
+	/** 找到某个类型的子视图 */
+	private static <T extends JComponent> T findChildByType(JComponent parent, Class<T> clazz) {
+		if (clazz.isInstance(parent)) {
+			return clazz.cast(parent);
+		}
+		for (Component comp : parent.getComponents()) {
+			if (comp instanceof JComponent) {
+				T found = findChildByType((JComponent) comp, clazz);
+				if (found != null) {
+					return found;
+				}
+			}
+		}
+		return null;
+	}
+
+	private static JComponent getInnerImage(ImageViewer imageViewer) throws NoSuchFieldException, IllegalAccessException {
+		Field field = ImageViewer.class.getDeclaredField("theImage");
+		field.setAccessible(true);
+		return (JComponent) field.get(imageViewer);
+	}
+}
+

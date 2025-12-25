@@ -1,10 +1,16 @@
 name: Build Test
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要构建的版本号（需要先设置对应tag）'
+        required: true
+        default: '1.0.0'
+#  push:
+#    branches: [ main ]
+#  pull_request:
+#    branches: [ main ]
 
 jobs:
   tests:
@@ -23,3 +29,9 @@ jobs:
 
       - name: Build
         run: ./gradlew build dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files-${{ github.event.inputs.tag }}
+          path: build/dist/
