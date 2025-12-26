@@ -18,7 +18,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
@@ -49,6 +51,7 @@ public class CfgImagePanel extends ContentPanel {
 	private final PImage pImage;
 	private final JLabel dotVersionLabel;
 	private final MyPluginOptions options;
+	private final Map<MyPluginOptions.DumpType, Image> imageCaches = new HashMap<>();
 
 	public CfgImagePanel(TabbedPane panel, CfgJNode node) {
 		super(panel, node);
@@ -139,11 +142,17 @@ public class CfgImagePanel extends ContentPanel {
 					pImage.setImage((Image) null);
 				});
 
-				// methodNode -> cfg -> png
 				String dotVersion = getDotVersion();
-				File dotFile = dumpCFG(methodNode, dumpType);
-				File pngFile = dot2Png(dotFile);
-				BufferedImage bufferedImage = ImageIO.read(pngFile);
+				Image bufferedImage;
+				if (imageCaches.get(dumpType) != null) {
+					bufferedImage = imageCaches.get(dumpType);
+				} else {
+					// methodNode -> cfg -> png
+					File dotFile = dumpCFG(methodNode, dumpType);
+					File pngFile = dot2Png(dotFile);
+					bufferedImage = ImageIO.read(pngFile);
+					imageCaches.put(dumpType, bufferedImage);
+				}
 
 				// 显示
 				UiUtils.uiRunAndWait(() -> {
@@ -171,43 +180,24 @@ public class CfgImagePanel extends ContentPanel {
 		File dotDir = Files.createTempDirectory(options.getTempDir(), "jadx-dot").toFile();
 		dotDir.deleteOnExit();
 
-		// 先 reload 生成 insn, 然后 passes 生成 block. DotGraphVisitor 需要 block
-		// 参考 Jadx.getRegionsModePasses() 中, 根据 args 在不同阶段创建了 3 个 DotGraphVisitor
-		// 在 visit 阶段找到这 3 个改为调用 save()
-		methodNode.reload();
+		// 多次加载会导致 Block ID 出错，所以仅加载一次。
+		if (!methodNode.isLoaded()) {
+			// 先 reload 生成 insn, 然后 passes 生成 block. DotGraphVisitor 需要 block
+			methodNode.reload();
 
-		// 为 args 设置 cfgOutput, 然后从获得的 pass 里判断 DotGraphVisitor，手动save
-		JadxArgs args = methodNode.root().getArgs();
-		boolean[] originalCfgOutput = {args.isRawCFGOutput(), args.isCfgOutput()};
-		try {
-			args.setCfgOutput(true);
-			args.setRawCFGOutput(true);
-			List<IDexTreeVisitor> passes = Jadx.getRegionsModePasses(args);
-			if (3 != passes.stream().filter(it -> it instanceof DotGraphVisitor).count()) {
-				throw new JadxRuntimeException(NLS.exceptionVisitorNot3);
-			}
-
-			for (IDexTreeVisitor pass : passes) {
-				pass.init(methodNode.root());
-			}
-
-			int dotPassCount = 0;
-			for (IDexTreeVisitor pass : passes) {
-				if (!(pass instanceof DotGraphVisitor)) {
-					pass.visit(methodNode);
-					continue;
-				}
-				// 找到对应类型的 DotGraphVisitor, 手动保存
-				dotPassCount++;
-				if (dotPassCount == dumpType.orderInRegionsModePasses) {
-					((DotGraphVisitor) pass).save(dotDir, methodNode);
-				}
-			}
-		} finally {
-			// 恢复原本设置
-			args.setRawCFGOutput(originalCfgOutput[0]);
-			args.setCfgOutput(originalCfgOutput[1]);
+			List<IDexTreeVisitor> passes = Jadx.getRegionsModePasses(methodNode.root().getArgs());
+			for (IDexTreeVisitor pass : passes) pass.init(methodNode.root());
+			for (IDexTreeVisitor pass : passes) pass.visit(methodNode);
 		}
+
+		if (dumpType == MyPluginOptions.DumpType.GENERAL) {
+			DotGraphVisitor.dump().save(dotDir, methodNode);
+		}else if (dumpType == MyPluginOptions.DumpType.RAW) {
+			DotGraphVisitor.dumpRaw().save(dotDir, methodNode);
+		}else if (dumpType == MyPluginOptions.DumpType.REGION) {
+			DotGraphVisitor.dumpRegions().save(dotDir, methodNode);
+		}
+
 
 		File dotFile = dotDir;
 		while (dotFile != null && dotFile.isDirectory()) {
@@ -273,5 +263,6 @@ public class CfgImagePanel extends ContentPanel {
 	public void dispose() {
 		super.dispose();
 		pImage.setImage((Image) null);
+		imageCaches.clear();
 	}
 }
