@@ -4,7 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
@@ -14,7 +13,6 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ItemListener;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.function.Function;
 
@@ -157,48 +155,58 @@ class MyComponents {
 		return centeredXY;
 	}
 
-	public static JPopupMenu popupMenu(Function<Void, Pair<String, Image>> contentGetter) {
+	public static JPopupMenu imagePopupMenu(Function<Void, Pair<String, Image>> contentGetter) {
 		JPopupMenu popupMenu = new JPopupMenu();
-		JMenuItem copyText = new JMenuItem("复制为文本");
+		// 复制为文本
+		JMenuItem copyText = new JMenuItem(NLS.textCopyAsTxt);
 		copyText.addActionListener(e -> {
 			Pair<String, Image> pair = contentGetter.apply(null);
 			String text = pair == null ? null : pair.getFirst();
 			if (text == null) return;
-			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(contentGetter.apply(null).getFirst()), null);
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
 		});
-		JMenuItem copyImage = new JMenuItem("复制为图片");
+
+		// 复制为图片
+		JMenuItem copyImage = new JMenuItem(NLS.textCopyAsImg);
 		copyImage.addActionListener(e -> {
 			Pair<String, Image> pair = contentGetter.apply(null);
 			Image rawImage = pair == null ? null : pair.getSecond();
-			CfgViewerPlugin.LOG.debug("复制图片：{}", rawImage);
+			CfgViewerPlugin.LOG.debug("{}：{}", NLS.textCopyAsImg, rawImage);
 			if (pair == null) return;
 //			// 不转换格式会报错 啊没事了是判断 flavor 写反了
 //			BufferedImage formattedImage = new BufferedImage(rawImage.getWidth(null), rawImage.getHeight(null), BufferedImage.TYPE_INT_RGB);
 //			Graphics2D g = formattedImage.createGraphics();
 //			g.drawImage(rawImage, 0, 0, null);
 //			g.dispose();
-			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new Transferable() {
-
-				@Override
-				public DataFlavor[] getTransferDataFlavors() {
-					return new DataFlavor[]{DataFlavor.imageFlavor};
-				}
-
-				@Override
-				public boolean isDataFlavorSupported(DataFlavor flavor) {
-					return DataFlavor.imageFlavor.equals(flavor);
-				}
-
-				@Override
-				public @NotNull Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
-					if (!isDataFlavorSupported(flavor)) throw new UnsupportedFlavorException(flavor);
-					return rawImage;
-				}
-			}, null);
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new ImageTransferable(rawImage), null);
 		});
 		popupMenu.add(copyText);
 		popupMenu.add(copyImage);
 
 		return popupMenu;
+	}
+
+	private static class ImageTransferable implements Transferable {
+		private final Image image;
+
+		private ImageTransferable(Image image) {
+			this.image = image;
+		}
+
+		@Override
+		public DataFlavor[] getTransferDataFlavors() {
+			return new DataFlavor[]{DataFlavor.imageFlavor};
+		}
+
+		@Override
+		public boolean isDataFlavorSupported(DataFlavor flavor) {
+			return DataFlavor.imageFlavor.equals(flavor);
+		}
+
+		@Override
+		public @NotNull Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+			if (!isDataFlavorSupported(flavor)) throw new UnsupportedFlavorException(flavor);
+			return image;
+		}
 	}
 }

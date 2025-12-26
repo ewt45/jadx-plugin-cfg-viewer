@@ -6,17 +6,12 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jetbrains.annotations.NotNull;
 import org.piccolo2d.PCanvas;
 import org.piccolo2d.PLayer;
-import org.piccolo2d.event.PBasicInputEventHandler;
-import org.piccolo2d.event.PInputEvent;
 import org.piccolo2d.nodes.PImage;
 
 import java.awt.Dimension;
 import java.awt.Image;
-import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.event.ItemEvent;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -24,14 +19,10 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
@@ -39,7 +30,6 @@ import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
-import jadx.api.JadxArgs;
 import jadx.core.Jadx;
 import jadx.core.dex.nodes.MethodNode;
 import jadx.core.dex.visitors.DotGraphVisitor;
@@ -97,7 +87,7 @@ public class CfgImagePanel extends ContentPanel {
 		pCanvas.setPanEventHandler(null);
 		pCanvas.setZoomEventHandler(null);
 		pImageContainer.addInputEventListener(MyListeners.imageDrag(pImage));
-		pImageContainer.addInputEventListener(MyListeners.imageZoom(pImage));
+		pImageContainer.addInputEventListener(MyListeners.imageZoom(pCanvas, pImage));
 
 		// 图片显示或切换时，缩放至显示全部内容
 		pImage.addPropertyChangeListener(PImage.PROPERTY_IMAGE, evt -> {
@@ -106,7 +96,7 @@ public class CfgImagePanel extends ContentPanel {
 		});
 
 		// 右键菜单，复制文本或图片
-		JPopupMenu contextMenu = MyComponents.popupMenu(v -> imageCaches.get(currentDumpType));
+		JPopupMenu contextMenu = MyComponents.imagePopupMenu(v -> imageCaches.get(currentDumpType));
 		pImageContainer.addInputEventListener(MyListeners.popupMenu(contextMenu));
 
 		// 左上角显示 dot 版本
@@ -205,14 +195,9 @@ public class CfgImagePanel extends ContentPanel {
 			for (IDexTreeVisitor pass : passes) pass.visit(methodNode);
 		}
 
-		if (dumpType == MyPluginOptions.DumpType.GENERAL) {
-			DotGraphVisitor.dump().save(dotDir, methodNode);
-		}else if (dumpType == MyPluginOptions.DumpType.RAW) {
-			DotGraphVisitor.dumpRaw().save(dotDir, methodNode);
-		}else if (dumpType == MyPluginOptions.DumpType.REGION) {
-			DotGraphVisitor.dumpRegions().save(dotDir, methodNode);
-		}
-
+		if (dumpType == MyPluginOptions.DumpType.GENERAL) DotGraphVisitor.dump().save(dotDir, methodNode);
+		else if (dumpType == MyPluginOptions.DumpType.RAW) DotGraphVisitor.dumpRaw().save(dotDir, methodNode);
+		else if (dumpType == MyPluginOptions.DumpType.REGION) DotGraphVisitor.dumpRegions().save(dotDir, methodNode);
 
 		File dotFile = dotDir;
 		while (dotFile != null && dotFile.isDirectory()) {

@@ -43,7 +43,7 @@ public class CfgViewerPlugin implements JadxPlugin {
 
 	@Override
 	public JadxPluginInfo getPluginInfo() {
-		JadxPluginInfo info =  new JadxPluginInfo(PLUGIN_ID, NLS.infoName, NLS.infoDescription);
+		JadxPluginInfo info = new JadxPluginInfo(PLUGIN_ID, NLS.infoName, NLS.infoDescription);
 		info.setRequiredJadxVersion("1.5.3, r2504");
 		info.setHomepage("https://github.com/ewt45/jadx-plugin-cfg-viewer");
 		return info;

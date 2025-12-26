@@ -29,6 +29,8 @@ class NLS {
 	public static String prefDefaultDumpType;
 	public static String textDumpErrorHappened;
 	public static String textLoading;
+	public static String textCopyAsTxt;
+	public static String textCopyAsImg;
 	public static String logNotSupportMouseWheelBlock;
 	public static String logTmpDotFile;
 	public static String logTmpPngFile;
@@ -64,6 +66,8 @@ class NLS {
 			logNotSupportMouseWheelBlock = "尚未支持 mouseWheelRotatedByBlock 缩放。";
 			textDumpErrorHappened = "生成控制流图时出现错误:\n";
 			textLoading = "加载中……";
+			textCopyAsTxt = "复制为文本";
+			textCopyAsImg = "复制为图片";
 			logTmpDotFile = "生成临时 dot 文件: {}";
 			logTmpPngFile = "生成临时 png 文件: {}";
 			exceptionVisitorNot3 = "Jadx.getRegionsModePasses() 返回的 DotGraphVisitor 个数不为 3！代码可能不兼容了！";
@@ -81,6 +85,8 @@ class NLS {
 			logNotSupportMouseWheelBlock = "mouseWheelRotatedByBlock not implemented.";
 			textDumpErrorHappened = "Error occurred while generating CFG:\n";
 			textLoading = "Loading ...";
+			textCopyAsTxt = "Copy as text";
+			textCopyAsImg = "Copy as image";
 			logTmpDotFile = "Temporary dot file generated: {}";
 			logTmpPngFile = "Temporary png file generated: {}";
 			exceptionVisitorNot3 = "The number of DotGraphVisitor returned by Jadx.getRegionsModePasses() is not 3！This version of Jadx is not supported！";

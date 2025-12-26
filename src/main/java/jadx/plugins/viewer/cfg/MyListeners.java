@@ -64,8 +64,37 @@ class MyListeners {
 		return new ImageDrag(imageNode);
 	}
 
-	public static PInputEventListener imageZoom(PNode imageNode) {
-		return new ImageZoom(imageNode);
+	/**
+	 * 鼠标滚轮缩放图片。点击中键复原
+	 *
+	 * @param parent 用于点击鼠标中键时，复原至适合该组件的大小
+	 */
+	public static PInputEventListener imageZoom(JComponent parent, PImage imageNode) {
+		return new PBasicInputEventHandler() {
+			@Override
+			public void mouseClicked(PInputEvent event) {
+				if (event.getButton() != MouseEvent.BUTTON2) return;
+				event.getSourceSwingEvent().consume();
+				// 鼠标中键复原
+				imageFit(parent, imageNode);
+			}
+
+			@Override
+			public void mouseWheelRotated(PInputEvent event) {
+				event.getSourceSwingEvent().consume();
+				int rotation = event.getWheelRotation();
+				Point2D mousePoint = event.getPosition();
+				// 如果要用节点的 scaleAboutPoint, 要将全局坐标转为该节点对应的局部坐标。 camera 的话直接传全局坐标就行
+				imageNode.globalToLocal(mousePoint);
+				imageNode.scaleAboutPoint(rotation < 0 ? 1.2 : 0.8, mousePoint);
+			}
+
+			@Override
+			public void mouseWheelRotatedByBlock(PInputEvent event) {
+				CfgViewerPlugin.LOG.error(NLS.logNotSupportMouseWheelBlock);
+			}
+
+		};
 	}
 
 	public static PInputEventListener popupMenu(JPopupMenu popupMenu) {
