@@ -4,7 +4,6 @@ import java.util.Objects;
 
 import javax.swing.JFrame;
 
-import jadx.api.metadata.ICodeNodeRef;
 import jadx.api.plugins.JadxPlugin;
 import jadx.api.plugins.JadxPluginContext;
 import jadx.api.plugins.gui.JadxGuiContext;
@@ -19,7 +18,6 @@ import jadx.gui.ui.MainWindow;
 public class CfgViewerPluginGuiDelegate {
 	private static final CfgViewerPluginGuiDelegate instance = new CfgViewerPluginGuiDelegate();
 
-	private JadxGuiContext guiCtx;
 	private final MyPluginOptions options = new MyPluginOptions();
 
 
@@ -35,9 +33,7 @@ public class CfgViewerPluginGuiDelegate {
 
 
 	private void onPluginInitInternal(JadxPluginContext context) {
-		guiCtx = Objects.requireNonNull(context.getGuiContext());
-
-		JadxGuiContext guiCtx = context.getGuiContext();
+		JadxGuiContext guiCtx = Objects.requireNonNull(context.getGuiContext());
 		// 本地化（等 jadx 侧实现）
 //		MainWindow mainWindow = getMainWindow();
 //		NLS.init(mainWindow.getSettings().getLangLocale().get());
@@ -50,27 +46,22 @@ public class CfgViewerPluginGuiDelegate {
 				NLS.optionViewCFG,
 				iCodeNodeRef -> iCodeNodeRef instanceof MethodNode,
 				null,
-				this::showControlFlowGraph
+				iCodeNodeRef -> {
+					if (!(iCodeNodeRef instanceof MethodNode)) throw new RuntimeException(NLS.exceptionNotMethodNode);
+					MethodNode methodNode = (MethodNode) iCodeNodeRef;
+					CfgJNode jNode = new CfgJNode(methodNode, options);
+					getMainWindow(guiCtx).getTabsController().selectTab(jNode);
+				}
 		);
-
 	}
 
-
-	private MainWindow getMainWindow() {
+	public static MainWindow getMainWindow(JadxGuiContext guiCtx) {
 		if (guiCtx == null) throw new RuntimeException("JadxGuiContext = null");
 		JFrame frame = guiCtx.getMainFrame();
 		if (!(frame instanceof MainWindow)) throw new RuntimeException(NLS.exceptionNoMainWindow);
 		return (MainWindow) frame;
 	}
 
-	private void showControlFlowGraph(ICodeNodeRef iCodeNodeRef) {
-		if (!(iCodeNodeRef instanceof MethodNode)) throw new RuntimeException(NLS.exceptionNotMethodNode);
-		MethodNode methodNode = (MethodNode) iCodeNodeRef;
-		CfgJNode jNode = new CfgJNode(methodNode, options);
-		getMainWindow().getTabsController().selectTab(jNode);
-	}
-
 	private void onPluginUnloadInternal() {
-		guiCtx = null;
 	}
 }

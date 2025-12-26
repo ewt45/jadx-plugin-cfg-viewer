@@ -16,6 +16,7 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 
 import javax.swing.JComponent;
+import javax.swing.JPopupMenu;
 
 class MyListeners {
 
@@ -67,6 +68,19 @@ class MyListeners {
 		return new ImageZoom(imageNode);
 	}
 
+	public static PInputEventListener popupMenu(JPopupMenu popupMenu) {
+		return new PBasicInputEventHandler() {
+			@Override
+			public void mouseClicked(PInputEvent event) {
+				if (event.getButton() != MouseEvent.BUTTON3) return;
+				event.getSourceSwingEvent().consume();
+				Point2D point2D = event.getCanvasPosition();
+				popupMenu.show(event.getSourceSwingEvent().getComponent(), (int) point2D.getX(), (int) point2D.getY());
+			}
+
+		};
+	}
+
 
 	private static class ImageDrag extends PDragSequenceEventHandler {
 		private final PNode draggedNode;
@@ -115,4 +129,5 @@ class MyListeners {
 			CfgViewerPlugin.LOG.error(NLS.logNotSupportMouseWheelBlock);
 		}
 	}
+
 }

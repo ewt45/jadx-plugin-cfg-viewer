@@ -1,18 +1,36 @@
 package jadx.plugins.viewer.cfg;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ItemListener;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.function.Function;
 
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
+
+import kotlin.Pair;
 
 class MyComponents {
 	/**
@@ -54,6 +72,35 @@ class MyComponents {
 			buttonsPanel.add(btn);
 		}
 		return buttonsPanel;
+	}
+
+	/**
+	 * 复制文字或图片到剪切板的按钮。两个按钮宽度各占一半。
+	 */
+	public static JPanel copyBtnPanel(JPanel topbarPanel) {
+		JPanel copyPanel = new JPanel();
+		copyPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+		copyPanel.setLayout(new BoxLayout(copyPanel, BoxLayout.X_AXIS));
+		copyPanel.setAlignmentX(0);
+		JButton copyText = new JButton("复制为文本") {
+			@Override
+			public Dimension getMaximumSize() {
+				Dimension dimension = super.getMaximumSize();
+				dimension.width = topbarPanel.getWidth() / 2;
+				return dimension;
+			}
+		};
+		JButton copyImage = new JButton("复制为图片") {
+			@Override
+			public Dimension getMaximumSize() {
+				Dimension dimension = super.getMaximumSize();
+				dimension.width = topbarPanel.getWidth() / 2;
+				return dimension;
+			}
+		};
+		copyPanel.add(copyText);
+		copyPanel.add(copyImage);
+		return copyPanel;
 	}
 
 	/**
@@ -108,5 +155,50 @@ class MyComponents {
 			centeredXY.setLocation(Math.max(centeredX, 0), Math.max(centeredY, 0));
 		}
 		return centeredXY;
+	}
+
+	public static JPopupMenu popupMenu(Function<Void, Pair<String, Image>> contentGetter) {
+		JPopupMenu popupMenu = new JPopupMenu();
+		JMenuItem copyText = new JMenuItem("复制为文本");
+		copyText.addActionListener(e -> {
+			Pair<String, Image> pair = contentGetter.apply(null);
+			String text = pair == null ? null : pair.getFirst();
+			if (text == null) return;
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(contentGetter.apply(null).getFirst()), null);
+		});
+		JMenuItem copyImage = new JMenuItem("复制为图片");
+		copyImage.addActionListener(e -> {
+			Pair<String, Image> pair = contentGetter.apply(null);
+			Image rawImage = pair == null ? null : pair.getSecond();
+			CfgViewerPlugin.LOG.debug("复制图片：{}", rawImage);
+			if (pair == null) return;
+//			// 不转换格式会报错 啊没事了是判断 flavor 写反了
+//			BufferedImage formattedImage = new BufferedImage(rawImage.getWidth(null), rawImage.getHeight(null), BufferedImage.TYPE_INT_RGB);
+//			Graphics2D g = formattedImage.createGraphics();
+//			g.drawImage(rawImage, 0, 0, null);
+//			g.dispose();
+			Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new Transferable() {
+
+				@Override
+				public DataFlavor[] getTransferDataFlavors() {
+					return new DataFlavor[]{DataFlavor.imageFlavor};
+				}
+
+				@Override
+				public boolean isDataFlavorSupported(DataFlavor flavor) {
+					return DataFlavor.imageFlavor.equals(flavor);
+				}
+
+				@Override
+				public @NotNull Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+					if (!isDataFlavorSupported(flavor)) throw new UnsupportedFlavorException(flavor);
+					return rawImage;
+				}
+			}, null);
+		});
+		popupMenu.add(copyText);
+		popupMenu.add(copyImage);
+
+		return popupMenu;
 	}
 }

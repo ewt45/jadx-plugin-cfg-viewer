@@ -6,12 +6,16 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import org.jetbrains.annotations.NotNull;
 import org.piccolo2d.PCanvas;
 import org.piccolo2d.PLayer;
+import org.piccolo2d.event.PBasicInputEventHandler;
+import org.piccolo2d.event.PInputEvent;
 import org.piccolo2d.nodes.PImage;
 
 import java.awt.Dimension;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.event.ItemEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,8 +28,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JRadioButton;
 import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
@@ -43,6 +51,7 @@ import jadx.gui.ui.codearea.AbstractCodeArea;
 import jadx.gui.ui.panel.ContentPanel;
 import jadx.gui.ui.tab.TabbedPane;
 import jadx.gui.utils.UiUtils;
+import kotlin.Pair;
 
 public class CfgImagePanel extends ContentPanel {
 	private static final long serialVersionUID = -4676535827617942121L;
@@ -51,7 +60,8 @@ public class CfgImagePanel extends ContentPanel {
 	private final PImage pImage;
 	private final JLabel dotVersionLabel;
 	private final MyPluginOptions options;
-	private final Map<MyPluginOptions.DumpType, Image> imageCaches = new HashMap<>();
+	private final HashMap<MyPluginOptions.DumpType, Pair<String, Image>> imageCaches = new HashMap<>();
+	private MyPluginOptions.DumpType currentDumpType;
 
 	public CfgImagePanel(TabbedPane panel, CfgJNode node) {
 		super(panel, node);
@@ -59,6 +69,7 @@ public class CfgImagePanel extends ContentPanel {
 
 		MethodNode methodNode = node.getMethodNode();
 		options = node.getPluginOptions();
+		currentDumpType = options.getDefaultDumpType();
 
 		// 给自身添加一个滚轮监听防止滚到其他 tab
 		addMouseWheelListener(e -> {
@@ -94,6 +105,10 @@ public class CfgImagePanel extends ContentPanel {
 			MyListeners.imageFit(pCanvas, pImage);
 		});
 
+		// 右键菜单，复制文本或图片
+		JPopupMenu contextMenu = MyComponents.popupMenu(v -> imageCaches.get(currentDumpType));
+		pImageContainer.addInputEventListener(MyListeners.popupMenu(contextMenu));
+
 		// 左上角显示 dot 版本
 		dotVersionLabel = new JLabel();
 		dotVersionLabel.setBorder(new EmptyBorder(8, 8, 8, 8));
@@ -117,7 +132,6 @@ public class CfgImagePanel extends ContentPanel {
 		add(pCanvas);
 		add(loadingLabel);
 
-		pCanvas.requestFocus();
 		pCanvas.setVisible(false);
 
 		// 非 ui 线程参考 BinaryContentPanel
@@ -130,6 +144,7 @@ public class CfgImagePanel extends ContentPanel {
 	 * 如果出错则显示报错
 	 */
 	private void processAndDisplay(MethodNode methodNode, MyPluginOptions.DumpType dumpType) {
+		currentDumpType = dumpType;
 		getMainWindow().getBackgroundExecutor().startLoading(() -> {
 			// 1. 显示加载中
 			// 2. 从 methodNode 获取 dot, 再转为 png (新建线程？）
@@ -145,13 +160,13 @@ public class CfgImagePanel extends ContentPanel {
 				String dotVersion = getDotVersion();
 				Image bufferedImage;
 				if (imageCaches.get(dumpType) != null) {
-					bufferedImage = imageCaches.get(dumpType);
+					bufferedImage = imageCaches.get(dumpType).getSecond();
 				} else {
 					// methodNode -> cfg -> png
 					File dotFile = dumpCFG(methodNode, dumpType);
 					File pngFile = dot2Png(dotFile);
 					bufferedImage = ImageIO.read(pngFile);
-					imageCaches.put(dumpType, bufferedImage);
+					imageCaches.put(dumpType, new Pair<>(Files.readString(dotFile.toPath()), bufferedImage));
 				}
 
 				// 显示
