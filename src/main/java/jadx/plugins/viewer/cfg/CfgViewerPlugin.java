@@ -31,6 +31,7 @@ META-INF 中 指向该类
 调试：
 	1. 复制到 jadx 项目中
 	2. 根目录 settings.gradle.kts 和 jadx-cli 的build.gradle.kts 添加该模块依赖
+	3. 算了直接在 jadx 项目新建一个分支吧。来回只需要复制 java 代码部分即可。
  */
 
 // TODO MyListeners.imageFitNow 和 缩ImageZoom 缩放范围根据图片尺寸而定
