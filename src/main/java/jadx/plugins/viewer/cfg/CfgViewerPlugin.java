@@ -36,6 +36,7 @@ META-INF 中 指向该类
 
 // TODO MyListeners.imageFitNow 和 缩ImageZoom 缩放范围根据图片尺寸而定
 // TODO 等待官方版本更新：1.5.4 后 CfgJNode 里重写 hasContent 方法。等待支持多语言。
+// FIXME 1. 全部 passes 执行完，dump 的和在中间 dump 的不一样。2. block id 还是不对，多了一轮
 
 public class CfgViewerPlugin implements JadxPlugin {
 	static final Logger LOG = LoggerFactory.getLogger(CfgViewerPlugin.class);
