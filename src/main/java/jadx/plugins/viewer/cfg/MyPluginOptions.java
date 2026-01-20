@@ -1,6 +1,9 @@
 package jadx.plugins.viewer.cfg;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import jadx.api.JadxArgs;
 import jadx.api.plugins.data.IJadxFiles;
@@ -46,6 +49,11 @@ public class MyPluginOptions extends BasePluginOptionsBuilder {
 
 		DumpType(int i) {
 			orderInRegionsModePasses = i;
+		}
+
+		@NotNull
+		public static DumpType getDumTypeByOrder(int order) {
+			return Arrays.stream(MyPluginOptions.DumpType.values()).filter(it -> order == it.orderInRegionsModePasses).findFirst().get();
 		}
 	}
 }

@@ -20,10 +20,12 @@ public class CfgJNode extends JNode {
 	private static final ImageIcon ICON = UiUtils.openSvgIcon("nodes/ImagesFileType");
 	private final MethodNode methodNode;
 	private final MyPluginOptions options;
+	private final CfgDotData dotData;
 
-	public CfgJNode(MethodNode node, MyPluginOptions options) {
+	public CfgJNode(MethodNode node, MyPluginOptions options, CfgDotData dotData) {
 		methodNode = node;
 		this.options = options;
+		this.dotData = dotData;
 	}
 
 	@Override
@@ -63,5 +65,9 @@ public class CfgJNode extends JNode {
 
 	public MyPluginOptions getPluginOptions() {
 		return options;
+	}
+
+	public CfgDotData getCfgDotData() {
+		return dotData;
 	}
 }

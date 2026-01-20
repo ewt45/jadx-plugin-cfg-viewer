@@ -1,5 +1,7 @@
 package jadx.plugins.viewer.cfg;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import javax.swing.JFrame;
@@ -19,6 +21,8 @@ public class CfgViewerPluginGuiDelegate {
 	private static final CfgViewerPluginGuiDelegate instance = new CfgViewerPluginGuiDelegate();
 
 	private final MyPluginOptions options = new MyPluginOptions();
+
+	private final List<CfgDotData> dotDataList = new ArrayList<>();
 
 
 	/** {@link JadxPlugin#init(JadxPluginContext)} 时，且 gui 存在时调用。 */
@@ -49,10 +53,23 @@ public class CfgViewerPluginGuiDelegate {
 				iCodeNodeRef -> {
 					if (!(iCodeNodeRef instanceof MethodNode)) throw new RuntimeException(NLS.exceptionNotMethodNode);
 					MethodNode methodNode = (MethodNode) iCodeNodeRef;
-					CfgJNode jNode = new CfgJNode(methodNode, options);
+					CfgJNode jNode = new CfgJNode(methodNode, options, getDotData(methodNode));
 					getMainWindow(guiCtx).getTabsController().selectTab(jNode);
 				}
 		);
+	}
+
+	/**
+	 * 从列表中获取函数对应的 dotData。如果没有，则新建一个添加到列表并返回
+	 */
+	public CfgDotData getDotData(MethodNode methodNode) {
+		String mthFullId = methodNode.getMethodInfo().getFullId();
+		for (CfgDotData data : dotDataList)
+			if (data.mthFullId.equals(mthFullId))
+				return data;
+		CfgDotData data = new CfgDotData(methodNode);
+		dotDataList.add(data);
+		return data;
 	}
 
 	public static MainWindow getMainWindow(JadxGuiContext guiCtx) {
