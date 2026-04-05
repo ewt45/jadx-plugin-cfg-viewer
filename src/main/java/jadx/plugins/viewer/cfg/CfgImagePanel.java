@@ -1,6 +1,5 @@
 package jadx.plugins.viewer.cfg;
 
-
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.piccolo2d.PCanvas;
@@ -30,7 +29,6 @@ import jadx.gui.ui.codearea.AbstractCodeArea;
 import jadx.gui.ui.panel.ContentPanel;
 import jadx.gui.ui.tab.TabbedPane;
 import jadx.gui.utils.UiUtils;
-import kotlin.Pair;
 
 public class CfgImagePanel extends ContentPanel {
 	private static final long serialVersionUID = -4676535827617942121L;

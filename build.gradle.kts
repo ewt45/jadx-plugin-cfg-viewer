@@ -4,7 +4,6 @@ import java.util.Locale
 
 plugins {
     `java-library`
-
     id("com.github.johnrengelman.shadow") version "8.1.1"
 
 	// auto update dependencies with 'useLatestVersions' task
@@ -13,7 +12,7 @@ plugins {
 }
 
 dependencies {
-	val jadxVersion = "1.5.3"
+	val jadxVersion = "1.5.5"
 	val isJadxSnapshot = jadxVersion.endsWith("-SNAPSHOT")
 
 	// use compile only scope to exclude jadx-core and its dependencies from result jar
@@ -25,9 +24,10 @@ dependencies {
 		isChanging = isJadxSnapshot
 	}
 
+	compileOnly("org.jetbrains:annotations:26.1.0")
 	compileOnly("org.slf4j:slf4j-api:2.0.17")
 	// 来自 jadx-gui
-	compileOnly("com.fifesoft:rsyntaxtextarea:3.6.0")
+	compileOnly("com.fifesoft:rsyntaxtextarea:3.6.1")
 	compileOnly("com.formdev:flatlaf-extras:3.7")
 
 	implementation("org.piccolo2d:piccolo2d-core:3.0.1")
