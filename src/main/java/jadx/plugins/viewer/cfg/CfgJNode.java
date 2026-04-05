@@ -43,8 +43,7 @@ public class CfgJNode extends JNode {
 		return ICON;
 	}
 
-	// FIXME jadx 1.5.3 之后才有这个函数。等 1.5.4 发布了就加上
-//	@Override
+	@Override
 	public boolean hasContent() {
 		return true;
 	}

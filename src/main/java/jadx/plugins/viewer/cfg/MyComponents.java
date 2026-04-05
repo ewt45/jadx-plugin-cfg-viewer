@@ -28,8 +28,6 @@ import javax.swing.JRadioButton;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
-import kotlin.Pair;
-
 class MyComponents {
 	/**
 	 * 顶部工具栏。位于左上角。背景色为白色半透明。
